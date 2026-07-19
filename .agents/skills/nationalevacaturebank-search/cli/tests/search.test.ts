@@ -92,6 +92,28 @@ describe("Nationale Vacaturebank API commands", () => {
     expect(request.searchParams.get("filters")).toBe("city:Amsterdam distance:40 dcoTitle:developer")
   })
 
+  test("search sanitizes multi-word queries into a single filter token", async () => {
+    let requestedUrl = ""
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      requestedUrl = String(input)
+      return Response.json({ page: 1, limit: 10, pages: 1, total: 0, _links: {}, _embedded: { jobs: [] } })
+    }) as typeof fetch
+    captureStdout()
+
+    const code = await runSearch({
+      query: "data engineer",
+      city: "Amsterdam",
+      distance: 40,
+      page: 1,
+      limit: 10,
+      format: "json",
+    })
+
+    expect(code).toBe(0)
+    const request = new URL(requestedUrl)
+    expect(request.searchParams.get("filters")).toBe("city:Amsterdam distance:40 dcoTitle:data-engineer")
+  })
+
   test("detail returns the parsed complete job object", async () => {
     globalThis.fetch = (async () => Response.json(job)) as typeof fetch
     const stdout = captureStdout()

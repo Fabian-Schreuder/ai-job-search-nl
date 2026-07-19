@@ -21,7 +21,7 @@ export function buildSearchPath(opts: SearchOpts): string {
     filters.push(`city:${opts.city}`)
     filters.push(`distance:${opts.distance}`)
   }
-  if (opts.query) filters.push(`dcoTitle:${opts.query}`)
+  if (opts.query) filters.push(`dcoTitle:${opts.query.replace(/\s+/g, "-")}`)
   if (filters.length > 0) params.set("filters", filters.join(" "))
 
   return `${JOBS_PATH}?${params.toString()}`
