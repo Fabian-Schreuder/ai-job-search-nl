@@ -1,0 +1,70 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "model": "anthropic/claude-opus-4-5",
+  "command": {
+    "setup": {
+      "template": "{file:.claude/commands/setup.md}",
+      "description": "Onboard candidate profile"
+    },
+    "scrape": {
+      "template": "{file:.claude/skills/job-scraper/SKILL.md}\n\nArguments: $ARGUMENTS",
+      "description": "Find and track new job postings"
+    },
+    "rank": {
+      "template": "{file:.claude/commands/rank.md}",
+      "description": "Evaluate and score a job"
+    },
+    "apply": {
+      "template": "{file:.claude/commands/apply.md}",
+      "description": "Draft and review application documents"
+    },
+    "interview": {
+      "template": "{file:.claude/commands/interview.md}",
+      "description": "Prepare interview materials"
+    },
+    "outcome": {
+      "template": "{file:.claude/commands/outcome.md}",
+      "description": "Record interview outcome"
+    },
+    "expand": {
+      "template": "{file:.claude/commands/expand.md}",
+      "description": "Discover transferable competencies"
+    },
+    "upskill": {
+      "template": "{file:.claude/skills/upskill/SKILL.md}\n\nArguments: $ARGUMENTS",
+      "description": "Generate prioritized learning plan"
+    },
+    "html-report": {
+      "template": "{file:.claude/commands/html-report.md}",
+      "description": "Generate application tracker dashboard"
+    },
+    "add-portal": {
+      "template": "{file:.claude/commands/add-portal.md}",
+      "description": "Register a new job portal"
+    },
+    "add-template": {
+      "template": "{file:.claude/commands/add-template.md}",
+      "description": "Register a custom CV/cover letter template"
+    },
+    "reset": {
+      "template": "{file:.claude/commands/reset.md}",
+      "description": "Wipe personalization and start over"
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "*": "ask",
+      "bun run *": "allow",
+      "bun install *": "allow",
+      "python salary_lookup.py *": "allow",
+      "python3 salary_lookup.py *": "allow",
+      "lualatex *": "allow",
+      "xelatex *": "allow",
+      "pdftotext *": "allow"
+    },
+    "webfetch": "allow",
+    "websearch": "allow"
+  }
+}

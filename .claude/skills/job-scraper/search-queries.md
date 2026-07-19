@@ -4,72 +4,77 @@
 
 ## Installed portal CLIs (primary for `/scrape`)
 
-`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search` and `freehire-search`; Danish demos and any skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
+`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Dutch-market CLIs include `nationalevacaturebank-search`, `linkedin-search`, and `freehire-search`; the Danish demo skills remain installed but are disabled by default. You do **not** need a matching `site:` line below for those CLIs to run.
 
 The `site:` query templates in this file are the **WebSearch fallback** — for portals without a CLI, company career pages, or when a CLI fails.
 
 ## Search Sites
 
-Primary (your market's job boards - scaffold one with `/add-portal`):
-- **[YOUR_JOB_BOARD]** - your market's largest general job board
-- **linkedin.com/jobs** - LinkedIn job listings (filter: [YOUR_COUNTRY] / [YOUR_CITY]); also covered by `linkedin-search` CLI
-- **[YOUR_INDUSTRY_JOB_BOARD]** - a niche/industry board for your field (optional)
-- **[YOUR_ADDITIONAL_JOB_BOARD]** - another major board for your market (optional)
+Primary (Dutch job boards with installed CLIs):
+- **nationalevacaturebank.nl** - broad Dutch vacancy coverage; covered by `nationalevacaturebank-search` CLI
+- **linkedin.com/jobs** - LinkedIn job listings (filter: Netherlands / city); also covered by `linkedin-search` CLI
+- **freehire.dev** - tech-focused, multi-market job aggregator; covered by `freehire-search` CLI
+
+WebSearch fallback (direct scraping is limited):
+- **intermediair.nl** - Dutch professional and specialist roles
+- **monsterboard.nl** - Dutch general job board
+- **indeed.nl** - Dutch listings; use WebSearch fallback only because direct scraping is limited
 
 Secondary (company career pages via Google):
 - Direct Google searches with `site:` filters for known target companies
 
 ## Query Categories
 
-Queries are grouped by priority. Each query should be combined with your location terms (e.g. your city, region, or metro area) where the site supports it.
+Queries are grouped by priority. Each query should be combined with Dutch location terms (e.g. Amsterdam, Utrecht, or Remote) where the site supports it. Add `vast`, `tijdelijk`, `fulltime`, `parttime`, or `MBO`/`HBO`/`WO` only when those preferences are relevant.
 
-### Priority 1: [YOUR_PRIMARY_ROLE_TYPE]
+### Priority 1: Software Engineering
 
-These match your strongest and most desired career direction.
-
-```
-site:[YOUR_JOB_BOARD] "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_CITY]
-site:[YOUR_JOB_BOARD] "[YOUR_KEY_SKILL]" [YOUR_CITY]
-site:linkedin.com/jobs "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_COUNTRY]
-```
-
-### Priority 2: [YOUR_DOMAIN_EXPERTISE]
-
-These match your domain expertise.
+These match the strongest and most desired technical career direction.
 
 ```
-site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_1] [YOUR_CITY] OR [YOUR_REGION]
-site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_2] [YOUR_COUNTRY]
-site:linkedin.com/jobs [YOUR_DOMAIN_KEYWORD_1] [YOUR_CITY] [YOUR_COUNTRY]
+site:intermediair.nl "software engineer" Amsterdam fulltime
+site:monsterboard.nl "backend developer" Utrecht vast
+site:indeed.nl "software engineer" Nederland
 ```
 
-### Priority 3: [YOUR_ADJACENT_ROLE_TYPE]
+### Priority 2: Data Engineering & Analytics
 
-Adjacent roles you could pivot into.
+These match data, analytics, and platform expertise.
 
 ```
-site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_1]" [YOUR_KEY_SKILL] [YOUR_CITY]
-site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_2]" [YOUR_KEY_SKILL] [YOUR_CITY]
+site:intermediair.nl "data engineer" Amsterdam HBO OR WO
+site:monsterboard.nl "analytics engineer" Rotterdam vast
+site:indeed.nl "data engineer" Den Haag fulltime
+```
+
+### Priority 3: Product & Delivery
+
+Adjacent roles that combine technical knowledge with product or delivery ownership.
+
+```
+site:intermediair.nl "product manager" Utrecht fulltime
+site:monsterboard.nl "product owner" Eindhoven vast
+site:indeed.nl "technical project manager" Amsterdam tijdelijk
 ```
 
 ### Priority 4: Broader Technical / Consulting
 
-Wider net for general technical roles.
+Wider net for consulting, implementation, and professional technology roles.
 
 ```
-site:[YOUR_JOB_BOARD] [YOUR_KEY_SKILL] developer [YOUR_CITY]
-site:linkedin.com/jobs "[YOUR_KEY_SKILL] developer" [YOUR_CITY]
-site:[YOUR_JOB_BOARD] "technical consultant" [YOUR_DOMAIN] [YOUR_CITY]
+site:intermediair.nl "consultant" IT Amsterdam HBO OR WO
+site:monsterboard.nl "technical consultant" Rotterdam fulltime
+site:indeed.nl "business consultant" Remote Nederland parttime
 ```
 
 ## Location Filter
 
-When evaluating results, verify the job location is within reasonable commute distance from your home. Define acceptable areas:
-- [YOUR_CITY] and surrounding areas
-- [ACCEPTABLE_AREA_1]
-- [ACCEPTABLE_AREA_2]
-- [BORDERLINE_AREA] (borderline - ~X min by transit)
-- [TOO_FAR_AREA] (too far)
+When evaluating results, verify the job location and travel arrangement match the agreed search area:
+- Amsterdam and surrounding Randstad area
+- Rotterdam and Den Haag
+- Utrecht
+- Eindhoven
+- Remote or hybride within the Netherlands
 
 ## Date Filter
 
@@ -78,4 +83,4 @@ Only include jobs posted within the last 14 days, or with an application deadlin
 ## Adapting Queries
 
 If the user specifies a focus area, select queries from the matching category and also generate 2-3 custom queries for that focus. For example:
-- "/scrape [focus_area]" -> relevant category queries + custom focus-specific queries
+- "/scrape data engineer" -> relevant category queries + custom focus-specific queries
