@@ -83,7 +83,7 @@ cd ai-job-search
 PowerShell:
 
 ```powershell
-$tools = @("nationalevacaturebank-search", "linkedin-search", "freehire-search")
+$tools = @("nationalevacaturebank-search", "werkenvoornederland-search", "linkedin-search", "freehire-search")
 foreach ($tool in $tools) {
   Push-Location ".agents/skills/$tool/cli"
   bun install
@@ -94,12 +94,12 @@ foreach ($tool in $tools) {
 Bash / zsh / Git Bash:
 
 ```bash
-for tool in nationalevacaturebank-search linkedin-search freehire-search; do
+for tool in nationalevacaturebank-search werkenvoornederland-search linkedin-search freehire-search; do
   (cd .agents/skills/$tool/cli && bun install)
 done
 ```
 
-For `linkedin-search` and `freehire-search` the install is optional: both have zero runtime dependencies and run with plain `bun`; `bun install` only pulls TypeScript dev types.
+For `werkenvoornederland-search`, `linkedin-search`, and `freehire-search` the install is optional: all three have zero runtime dependencies and run with plain `bun`; `bun install` only pulls TypeScript dev types.
 
 ### 3. Set up your profile
 
@@ -190,6 +190,7 @@ ai-job-search/
 │   ├── jobindex-search/               # Jobindex.dk (Denmark)
 │   ├── jobnet-search/                 # Jobnet.dk (Denmark, government portal)
 │   ├── nationalevacaturebank-search/   # Nationale Vacaturebank (Netherlands)
+│   ├── werkenvoornederland-search/      # Werken voor Nederland (Dutch government)
 │   ├── linkedin-search/               # LinkedIn public job listings (country-agnostic)
 │   └── freehire-search/               # freehire.me tech job aggregator (multi-market, REST API)
 ├── cv/
@@ -290,7 +291,7 @@ If you prefer doing it by hand, the manual route still works: update the guidanc
 
 ### Job search tools
 
-This Dutch-market fork enables **`nationalevacaturebank-search`** for Nationale Vacaturebank listings. `/scrape` discovers the skill automatically, alongside the country-agnostic `linkedin-search` and `freehire-search` skills. The four Danish CLI tools in `.agents/skills/` (Jobbank, Jobdanmark, Jobindex, Jobnet) remain installed as demos but are disabled by default.
+This Dutch-market fork enables **`nationalevacaturebank-search`** for Nationale Vacaturebank listings and **`werkenvoornederland-search`** for Dutch government vacancies. `/scrape` discovers both automatically, alongside the country-agnostic `linkedin-search` and `freehire-search` skills. The four Danish CLI tools in `.agents/skills/` (Jobbank, Jobdanmark, Jobindex, Jobnet) remain installed as demos but are disabled by default.
 
 ```bash
 bun run .agents/skills/nationalevacaturebank-search/cli/src/cli.ts search -q "data engineer" --city Amsterdam --jobage 14 --format table
@@ -348,6 +349,130 @@ To wipe your profile data and start fresh:
 ### Staying up to date
 
 Upstream moves fast. Rather than pulling raw `master` and hoping, update your fork to a tagged [release](../../releases) - a vetted checkpoint described in [CHANGELOG.md](CHANGELOG.md). `python3 tools/check_upstream_updates.py` previews exactly which of your personalized files an update touches before you merge, and `python3 tools/upstream_triage.py` sorts the commits you're behind into "worth reviewing" vs "probably skip" (a weekly workflow can post this to a rolling issue). Full walkthrough in [SETUP.md, section 8](SETUP.md#8-pulling-upstream-updates-into-your-fork).
+
+## Best candidates
+
+The repository currently has native search integrations for **Nationale Vacaturebank, Werken voor Nederland, LinkedIn, and freehire**, while Indeed, Intermediair, and Monsterboard are only WebSearch fallbacks. New portal skills are automatically discovered by `/scrape`, so each candidate can be added independently without changing the orchestration layer.
+
+For a focus on AI/product, data, consumer-facing companies, health, and scale-ups, prioritize these portals:
+
+### 1. Werken voor Nederland - implemented
+
+Adds a genuinely separate market: ministries, regulators, executive agencies, research organizations, and public digital infrastructure. Current listings include Data & AI Advisor and Product Owner positions, often with transparent salary, hours, contract type, posting date, and deadline. That also makes it unusually useful for evaluating freedom, part-time compatibility, and earnings per hour.
+
+**Technical fit:** very strong. Search pages use visible query parameters, vacancy pages are server-rendered, and the robots file permits vacancy crawling and exposes a vacancy sitemap.
+
+**Status:** implemented as `werkenvoornederland-search`, enabled by default, and automatically discovered by `/scrape`.
+
+### 2. Magnet.me - strongest early-career and product addition
+
+Magnet adds product management, business, consulting, traineeships, and starter roles that freehire will generally miss. Its postings expose useful structured attributes such as experience range, function, salary, degree level, language, and deadline. Current examples include product-management and data-product vacancies at companies such as bol, KPN, Alliander, and financial institutions.
+
+This is particularly valuable for finding:
+
+- Associate or junior product roles
+- Product analyst and business analyst roles
+- Data-product and platform-product positions
+- Graduate programmes and traineeships
+
+**Technical fit:** medium. Public vacancy pages are parseable, but its robots rules restrict some query-based URLs. An integration should use permitted canonical category, location, and pagination paths rather than generating arbitrary query URLs.
+
+### 3. I amsterdam Job Search - best Amsterdam and international-company discovery source
+
+The official search currently exposes approximately **900 jobs from 131 companies**, with sector filters including Agri & Food, ICT, Life Sciences & Health, consulting, fintech, and sustainable innovation. It includes both local scale-ups and larger international employers, and is specifically aimed at English-speaking candidates.
+
+Its largest value is not only the listings themselves: it frequently points directly to company career pages and ATS-hosted vacancies. That can reveal positions not surfaced through the existing Dutch general board.
+
+**Technical fit:** medium. Treat it as a **discovery aggregator**:
+
+- Capture the destination vacancy URL, not just the I amsterdam page.
+- Canonicalize LinkedIn, Greenhouse, Recruitee, and employer URLs.
+- Deduplicate heavily against LinkedIn and direct-company sources.
+
+### 4. DataJobs.nl - best specialized AI/data board
+
+DataJobs is explicitly focused on Dutch data, AI, and analytics vacancies. Its current listings cover Data Analyst, Business Analyst, Data Engineer, AI Engineer, and Machine Learning Engineer, and frequently expose hours, contract type, hybrid status, and salary.
+
+It will overlap with LinkedIn and Nationale Vacaturebank, but should improve recall for smaller specialist employers and consultancies whose vacancies can disappear among generic search results.
+
+**Technical fit:** likely good. The public site has keyword and geographical search, individual vacancy pages, and consistently structured listing cards. It still needs the repository's required robots and terms validation before implementation.
+
+### 5. Emerce Jobs - high-precision digital product source
+
+Emerce Jobs is focused on Dutch e-business, digital media, and marketing. Its inventory includes product, project-management, data, e-commerce, and AI-adjacent positions. The volume is lower than a general board, but the expected precision for consumer technology, marketplaces, digital agencies, and product-led businesses is much higher.
+
+This is a particularly good complement to a consumer-behaviour and product direction.
+
+**Technical fit:** likely good-to-medium. Public search and vacancy pages are available, but exact access rules should be checked during `/add-portal`.
+
+### 6. Consultancy.nl - valuable bridge between business and technical AI
+
+Consultancy.nl has dedicated categories for **AI & GenAI, Data Science, Digital, IT Strategy, and healthcare**, including traineeships and early-career positions. Current results include Data/AI Consultant traineeships, Data Product Owner/Strategist, analytics roles, and digital-health consulting positions.
+
+This source is highly relevant for candidates who are technical enough to understand AI and business-oriented enough to shape products and implementation.
+
+**Downside:** expect significant duplication and many vacancies requiring several years of consulting experience. It should run after higher-precision sources.
+
+### 7. DevITJobs.nl - useful salary-transparent technical fallback
+
+DevITJobs focuses on Dutch technology roles and standardizes salary information in postings. It is valuable for software, data engineering, ML engineering, and adjacent technical roles, but contributes less to product-management and consumer-health discovery.
+
+**Recommendation:** second wave, or enabled only for technical search categories.
+
+### 8. AcademicTransfer - optional research and health-innovation source
+
+AcademicTransfer covers universities, university medical centres, research institutes, and research-related government or industry positions. It can surface health-data, research engineer, project manager, data steward, and applied-AI positions that general boards miss.
+
+Because the target is product and applied industry work rather than a conventional academic path, install it with `enabled: false` by default and activate it for searches such as `/scrape health research` or `/scrape applied AI`.
+
+### Recommended implementation sequence
+
+1. **Werken voor Nederland** - best combination of unique inventory, structured metadata, and technical accessibility.
+2. **DataJobs.nl** - small, focused, and directly relevant.
+3. **Emerce Jobs** - adds digital-product and consumer-tech precision.
+4. **Magnet.me** - high value, but requires more careful URL and robots handling.
+5. **I amsterdam** - valuable discovery layer, but needs destination-URL deduplication.
+6. **Consultancy.nl** - broad supplementary source.
+7. **DevITJobs and AcademicTransfer** - optional search modes.
+
+### Sources not suited to portal CLIs
+
+- **Welcome to the Jungle:** job search and matching increasingly require an account, making it unsuitable for the repository's public, unauthenticated portal model.
+- **Amsterdam Startup Map:** vacancies are now hidden behind login.
+- **DutchTechJobs and ScaleupJobs:** domains referenced in older Amsterdam job-board guides now appear to contain unrelated casino or spam content.
+- **Silicon Canals Jobs:** the former jobs link now redirects to editorial hiring content rather than a functioning vacancy board.
+- **IamExpat and Undutchables:** legitimate, but largely recruitment- or intermediary-heavy and likely to add less unique inventory than the candidates above.
+
+### Repository improvements for these integrations
+
+#### Add canonical destination URLs
+
+The existing portal contract requires `id`, `title`, `company`, `location`, `date`, and `url`, but allows additional fields. Add:
+
+```json
+{
+  "url": "listing page used by the source",
+  "applyUrl": "final employer or ATS vacancy URL",
+  "canonicalUrl": "normalized URL used for deduplication",
+  "sourceKind": "employer|official|niche-board|aggregator"
+}
+```
+
+This is particularly important for I amsterdam, Magnet, and Consultancy.nl. The current contract can accommodate additive fields without changing the shared minimum result shape.
+
+#### Prioritize original sources during deduplication
+
+```text
+direct employer / ATS
+> official sector platform
+> specialist job board
+> broad job board
+> LinkedIn or general aggregator
+```
+
+That prevents the same vacancy from appearing separately through I amsterdam, Magnet, LinkedIn, and a company career page.
+
+After these portal integrations, the highest-leverage next step would be **target-company ATS monitoring** for public Recruitee, Greenhouse, Lever, and Ashby career pages. For a scale-up-focused search, that is likely to add more unique opportunities than integrating another generic Dutch vacancy board.
 
 ## Tips for better results
 
