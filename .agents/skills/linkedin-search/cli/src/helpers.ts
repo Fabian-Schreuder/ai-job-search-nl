@@ -12,9 +12,7 @@ export function writeError(error: string, code: string): void {
   process.stderr.write(JSON.stringify({ error, code }) + "\n")
 }
 
-const UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+const UA = "Mozilla/5.0 (compatible; linkedin-search-cli/1.0)"
 
 /** Fetch HTML with exponential backoff on 429/5xx. Returns "" on a 404. */
 export async function htmlFetch(url: string): Promise<string> {
@@ -29,6 +27,7 @@ export async function htmlFetch(url: string): Promise<string> {
         "X-Requested-With": "XMLHttpRequest",
       },
       redirect: "follow",
+      signal: AbortSignal.timeout(15000),
     })
     if (response.status === 429 || response.status >= 500) {
       if (attempt === maxRetries) {
@@ -65,6 +64,37 @@ export interface JobDetail extends JobCard {
   jobFunction: string | null
   industries: string | null
   applyUrl: string | null
+}
+
+/**
+ * Extract the inner HTML of a <div> identified by a CSS class name, correctly
+ * handling nested <div> elements by tracking tag depth.
+ */
+export function extractDivContent(html: string, className: string): string | null {
+  const escaped = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const openRe = new RegExp(`<div[^>]*class="[^"]*${escaped}[^"]*"[^>]*>`, 'i')
+  const open = openRe.exec(html)
+  if (!open) return null
+
+  let i = open.index + open[0].length
+  let depth = 1
+
+  while (depth > 0 && i < html.length) {
+    const nextOpen = html.indexOf('<div', i)
+    const nextClose = html.indexOf('</div>', i)
+
+    if (nextClose === -1) return null
+
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth++
+      i = nextOpen + 4
+    } else {
+      depth--
+      i = nextClose + 6
+    }
+  }
+
+  return html.slice(open.index + open[0].length, i - 6)
 }
 
 /**
@@ -179,11 +209,11 @@ export function parseJobDetail(html: string, id: string): JobDetail {
 
   // Rich description block. Keep paragraph/line breaks as newlines.
   let description: string | null = null
-  const desc = html.match(
-    /class="(?:show-more-less-html__markup|description__text[^"]*)"[^>]*>([\s\S]*?)<\/div>/i,
-  )
-  if (desc) {
-    const withBreaks = desc[1]
+  const descHtml =
+    extractDivContent(html, "show-more-less-html__markup") ??
+    extractDivContent(html, "description__text")
+  if (descHtml) {
+    const withBreaks = descHtml
       .replace(/<\s*br\s*\/?>/gi, "\n")
       .replace(/<\/(p|li|ul|ol|div|h\d)>/gi, "\n")
     description = decodeHtmlEntities(stripTags(withBreaks)).replace(/\n{3,}/g, "\n\n").trim() || null
@@ -222,6 +252,12 @@ export function parseJobDetail(html: string, id: string): JobDetail {
 export function jobageToTPR(days: number): string | null {
   if (!days || days <= 0 || days >= 9999) return null
   return `r${days * 86400}`
+}
+
+/** Convert a job-age in minutes to LinkedIn's f_TPR seconds value (sub-day precision). */
+export function minutesToTPR(minutes: number): string | null {
+  if (!minutes || minutes <= 0) return null
+  return `r${minutes * 60}`
 }
 
 /** Workplace-type flag: on-site=1, remote=2, hybrid=3. */
