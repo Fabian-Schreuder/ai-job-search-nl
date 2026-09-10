@@ -1,4 +1,5 @@
 import { BASE_URL } from "./http.js"
+import { toVacancyResult } from "./helpers.js"
 import type { Salary, SearchPage, VacancyDetail, VacancyResult } from "./types.js"
 
 const MONTHS: Readonly<Record<string, string>> = {
@@ -62,23 +63,19 @@ function parseCard(chunk: string): VacancyResult | null {
   if (!path || !titleHtml) return null
   const id = normalizeVacancyInput(path)
   if (!id) return null
-  const url = `${BASE_URL}/vacatures/${id}`
-  return {
+  return toVacancyResult({
     id,
     title: cleanHtml(titleHtml),
     company: capture(chunk, /class="vacancy__employer"[^>]*>([\s\S]*?)<\/p>/i),
     location: labelledValue(chunk, "Locatie"),
     date: dutchDate(capture(chunk, /class="job-short-info__top"[^>]*>([\s\S]*?)<\/div>/i)),
-    url,
     deadline: dutchDate(capture(chunk, /class="vacancy-publication-end"[^>]*>([\s\S]*?)<\/span>/i)),
     hours: labelledValue(chunk, "Uren per week"),
     salary: labelledValue(chunk, "Salaris"),
     educationLevel: labelledValue(chunk, "Niveau"),
     contractType: labelledValue(chunk, "Arbeidsovereenkomst"),
     summary: capture(chunk, /class="vacancy__description"[^>]*>([\s\S]*?)<\/p>/i),
-    sourceKind: "official",
-    canonicalUrl: url,
-  }
+  })
 }
 
 export function parseSearchPage(html: string): SearchPage {
