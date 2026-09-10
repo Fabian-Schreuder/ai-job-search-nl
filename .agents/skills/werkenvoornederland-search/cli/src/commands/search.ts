@@ -1,4 +1,4 @@
-import { htmlFetch } from "../http.js"
+import { BASE_URL, htmlFetch } from "../http.js"
 import { writeError } from "../helpers.js"
 import { parseSearchPage } from "../parsers.js"
 import type { OutputFormat, VacancyResult } from "../types.js"
