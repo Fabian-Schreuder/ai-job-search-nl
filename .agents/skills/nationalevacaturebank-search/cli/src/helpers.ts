@@ -28,6 +28,11 @@ export interface WorkingHours {
   max: number | null
 }
 
+export interface WorkLocation {
+  readonly city: string | null
+  readonly displayName: string | null
+}
+
 /** Documented job shape returned by the vacancy search and detail endpoints. */
 export interface NationaleVacaturebankJob {
   id: string | number
@@ -44,6 +49,7 @@ export interface NationaleVacaturebankJob {
   endDate: string | null
   status: string | null
   workingHours: WorkingHours | null
+  workLocation?: WorkLocation | null
 }
 
 export interface SearchApiResponse {
@@ -54,6 +60,13 @@ export interface SearchApiResponse {
   _links: Record<string, unknown>
   _embedded: {
     jobs: NationaleVacaturebankJob[]
+  }
+}
+
+export interface GeolocationApiResponse {
+  readonly cityCenter: {
+    readonly latitude: string
+    readonly longitude: string
   }
 }
 
@@ -130,14 +143,14 @@ export function jobUrl(id: string): string {
 }
 
 /** Convert an API job to the shared search-result contract. */
-export function toResult(job: NationaleVacaturebankJob, requestedCity?: string): JobResult {
+export function toResult(job: NationaleVacaturebankJob): JobResult {
   const id = String(job.id)
   return {
     id,
     title: job.title || job.dcoTitle || "(untitled)",
     company: job.company?.name ?? null,
     companyUrl: job.company?.website ?? null,
-    location: requestedCity ?? null,
+    location: job.workLocation?.displayName ?? job.workLocation?.city ?? null,
     date: job.startDate ?? null,
     url: jobUrl(id),
     dcoTitle: job.dcoTitle ?? null,

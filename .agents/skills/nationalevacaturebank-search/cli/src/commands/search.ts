@@ -1,4 +1,4 @@
-import { JOBS_PATH, apiGet, toResult, writeError, type JobResult, type NationaleVacaturebankJob, type SearchApiResponse } from "../helpers.js"
+import { JOBS_PATH, apiGet, toResult, writeError, type GeolocationApiResponse, type JobResult, type NationaleVacaturebankJob, type SearchApiResponse } from "../helpers.js"
 
 export interface SearchOpts {
   query?: string
@@ -10,7 +10,9 @@ export interface SearchOpts {
   format: "json" | "table" | "plain"
 }
 
-export function buildSearchPath(opts: SearchOpts): string {
+type Coordinates = GeolocationApiResponse["cityCenter"]
+
+export function buildSearchPath(opts: SearchOpts, coordinates?: Coordinates): string {
   const params = new URLSearchParams()
   params.set("page", String(opts.page))
   params.set("limit", String(opts.limit))
@@ -19,7 +21,11 @@ export function buildSearchPath(opts: SearchOpts): string {
   const filters: string[] = []
   if (opts.city) {
     filters.push(`city:${opts.city}`)
-    filters.push(`distance:${opts.distance}`)
+    if (coordinates) {
+      filters.push(`latitude:${coordinates.latitude}`)
+      filters.push(`longitude:${coordinates.longitude}`)
+      filters.push(`distance:${opts.distance}`)
+    }
   }
   if (opts.query) filters.push(`dcoTitle:${opts.query.replace(/\s+/g, "-")}`)
   if (filters.length > 0) params.set("filters", filters.join(" "))
@@ -60,9 +66,13 @@ function renderPlain(rows: JobResult[]): string {
 
 export async function runSearch(opts: SearchOpts): Promise<number> {
   try {
-    const response = await apiGet<SearchApiResponse>(buildSearchPath(opts))
+    const geolocation = opts.city
+      ? await apiGet<GeolocationApiResponse>(`/api/v1/geolocations/nl/${encodeURIComponent(opts.city)}`)
+      : null
+    if (opts.city && geolocation === null) throw new Error(`city not found: ${opts.city}`)
+    const response = await apiGet<SearchApiResponse>(buildSearchPath(opts, geolocation?.cityCenter))
     const jobs = filterByJobAge(response?._embedded.jobs ?? [], opts.jobage).slice(0, opts.limit)
-    const results = jobs.map((job) => toResult(job, opts.city))
+    const results = jobs.map((job) => toResult(job))
     const page = response?.page ?? opts.page
     const total = response?.total ?? results.length
 

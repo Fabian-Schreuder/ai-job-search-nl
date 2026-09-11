@@ -22,6 +22,7 @@ const job: NationaleVacaturebankJob = {
   endDate: null,
   status: "published",
   workingHours: { min: 32, max: 40 },
+  workLocation: { city: "Amstelveen", displayName: "Amstelveen" },
 }
 
 function captureStdout(): () => string {
@@ -42,6 +43,10 @@ function captureStderr(): () => string {
   return () => stderr
 }
 
+function installFetch(handler: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>): void {
+  globalThis.fetch = Object.assign(handler, { preconnect: originalFetch.preconnect })
+}
+
 afterEach(() => {
   globalThis.fetch = originalFetch
   process.stdout.write = originalStdoutWrite
@@ -51,9 +56,12 @@ afterEach(() => {
 describe("Nationale Vacaturebank API commands", () => {
   test("search returns parsed portal-skill results with Dutch locale headers", async () => {
     let requestedUrl = ""
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    installFetch(async (input: RequestInfo | URL, init?: RequestInit) => {
       requestedUrl = String(input)
       expect(new Headers(init?.headers).get("Accept-Language")).toBe("nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7")
+      if (new URL(requestedUrl).pathname === "/api/v1/geolocations/nl/Amsterdam") {
+        return Response.json({ cityCenter: { latitude: "52.359273", longitude: "4.887517" } })
+      }
       return Response.json({
         page: 1,
         limit: 10,
@@ -62,7 +70,7 @@ describe("Nationale Vacaturebank API commands", () => {
         _links: {},
         _embedded: { jobs: [job] },
       })
-    }) as typeof fetch
+    })
     const stdout = captureStdout()
 
     const code = await runSearch({
@@ -82,22 +90,27 @@ describe("Nationale Vacaturebank API commands", () => {
       title: "Backend Developer",
       company: "Voorbeeld BV",
       companyUrl: "https://voorbeeld.nl",
-      location: "Amsterdam",
+      location: "Amstelveen",
       date: "2099-01-01T00:00:00.000Z",
     })
 
     const request = new URL(requestedUrl)
     expect(request.pathname).toBe("/api/jobs/v3/sites/nationalevacaturebank.nl/jobs")
     expect(request.searchParams.get("sort")).toBe("relevance")
-    expect(request.searchParams.get("filters")).toBe("city:Amsterdam distance:40 dcoTitle:developer")
+    expect(request.searchParams.get("filters")).toBe(
+      "city:Amsterdam latitude:52.359273 longitude:4.887517 distance:40 dcoTitle:developer",
+    )
   })
 
   test("search sanitizes multi-word queries into a single filter token", async () => {
     let requestedUrl = ""
-    globalThis.fetch = (async (input: RequestInfo | URL) => {
+    installFetch(async (input: RequestInfo | URL) => {
       requestedUrl = String(input)
+      if (new URL(requestedUrl).pathname === "/api/v1/geolocations/nl/Amsterdam") {
+        return Response.json({ cityCenter: { latitude: "52.359273", longitude: "4.887517" } })
+      }
       return Response.json({ page: 1, limit: 10, pages: 1, total: 0, _links: {}, _embedded: { jobs: [] } })
-    }) as typeof fetch
+    })
     captureStdout()
 
     const code = await runSearch({
@@ -111,11 +124,45 @@ describe("Nationale Vacaturebank API commands", () => {
 
     expect(code).toBe(0)
     const request = new URL(requestedUrl)
-    expect(request.searchParams.get("filters")).toBe("city:Amsterdam distance:40 dcoTitle:data-engineer")
+    expect(request.searchParams.get("filters")).toBe(
+      "city:Amsterdam latitude:52.359273 longitude:4.887517 distance:40 dcoTitle:data-engineer",
+    )
+  })
+
+  test("Given a city radius, when searching, then coordinates are resolved before applying distance", async () => {
+    const requestedUrls: string[] = []
+    installFetch(async (input: RequestInfo | URL): Promise<Response> => {
+      const url = String(input)
+      requestedUrls.push(url)
+      if (new URL(url).pathname === "/api/v1/geolocations/nl/Utrecht") {
+        return Response.json({ cityCenter: { latitude: "52.0907", longitude: "5.1214" } })
+      }
+      return Response.json({ page: 1, limit: 10, pages: 0, total: 0, _links: {}, _embedded: { jobs: [] } })
+    })
+    captureStdout()
+
+    const code = await runSearch({
+      query: "AI consultant",
+      city: "Utrecht",
+      distance: 60,
+      page: 1,
+      limit: 10,
+      format: "json",
+    })
+
+    expect(code).toBe(0)
+    expect(requestedUrls.map((url) => new URL(url).pathname)).toEqual([
+      "/api/v1/geolocations/nl/Utrecht",
+      "/api/jobs/v3/sites/nationalevacaturebank.nl/jobs",
+    ])
+    expect(requestedUrls.map((url) => new URL(url).searchParams.get("filters"))).toEqual([
+      null,
+      "city:Utrecht latitude:52.0907 longitude:5.1214 distance:60 dcoTitle:AI-consultant",
+    ])
   })
 
   test("detail returns the parsed complete job object", async () => {
-    globalThis.fetch = (async () => Response.json(job)) as typeof fetch
+    installFetch(async () => Response.json(job))
     const stdout = captureStdout()
 
     const code = await runDetail({ id: "12345", format: "json" })
@@ -125,7 +172,7 @@ describe("Nationale Vacaturebank API commands", () => {
   })
 
   test("detail reports a 404 as NOT_FOUND", async () => {
-    globalThis.fetch = (async () => new Response(null, { status: 404 })) as typeof fetch
+    installFetch(async () => new Response(null, { status: 404 }))
     const stderr = captureStderr()
 
     const code = await runDetail({ id: "12345", format: "json" })
