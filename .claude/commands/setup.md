@@ -331,9 +331,12 @@ This section generates the search queries that power `/scrape`. Use the informat
 Ask about:
 - **Role titles to search for:** Job titles for the same underlying work vary a lot across companies and markets - a "Data Scientist" role at one employer may be called "Insights Analyst" or "Data Consultant" at another. Ask about the function first: "What kind of work do you actually want to be doing day-to-day?" Then translate that into concrete search terms: "Given that, what job titles should I search for? For example: Data Scientist, ML Engineer, Geophysicist." Collect 3-8 specific titles, but keep the underlying function in mind - it feeds the category naming in `search-queries.md` and the Experience Match dimension in `04-job-evaluation.md`.
 - **Key skills as search terms:** "Which of your skills are most likely to appear in job postings?" Pick 3-5 that are distinctive and searchable.
+- **Positive task signals:** Ask which activities must appear in a plausible posting (for example implementation, prototyping, stakeholder work, model evaluation, or user research). These become post-detail inclusion signals for generic job titles; they must not reject a listing whose description has not been fetched yet.
+- **Career stage and title exclusions:** Ask which levels are realistic now and which recurring role shapes waste time (for example senior leadership, pure research, sales, infrastructure, internships, or freelance contracts). Record exceptions explicitly so a level-flexible title is not discarded mechanically.
+- **Domain boosts:** Ask which sectors improve motivation or transferability without making them hard requirements. Keep these separate from deal-breakers.
 - **Target companies (optional):** "Are there specific companies you'd like to monitor for openings?"
 - **Geographic scope:** "Which cities or regions should I search in? How far are you willing to commute?" Use this to define the location filter tiers (ideal, acceptable, borderline, too far).
-- **Job portals:** "The framework ships country-agnostic search CLIs (`linkedin-search`, `freehire-search`, enabled by default) plus Danish portal demos (Jobindex, Jobbank, Jobdanmark, Jobnet) that ship **disabled**. `/scrape` auto-discovers whatever portal skills are installed under `.agents/skills/` and skips any with `enabled: false`. Which portals fit your market?" **Then act on the answer:** if the user's market is Denmark (or they ask for the Danish boards), edit each of the four Danish `SKILL.md` files and set `enabled: true` in the frontmatter; otherwise leave them disabled and say so - they cost nothing while disabled and can be enabled later by flipping the flag. If the user needs a local board that is not shipped, guide them to `/add-portal` (market-specific skills live in their fork). WebSearch/`site:` queries remain the fallback for portals without a CLI skill.
+- **Job portals:** "This Dutch-market fork ships Nationale Vacaturebank and Werken voor Nederland alongside country-agnostic LinkedIn and freehire search CLIs; all four are enabled by default. Danish portal demos (Jobindex, Jobbank, Jobdanmark, Jobnet) ship disabled. `/scrape` auto-discovers installed skills and skips any with `enabled: false`. Which portals fit your search?" **Then act on the answer:** keep the Dutch and country-agnostic portals that fit; if the user's market is Denmark (or they ask for the Danish boards), edit each of the four Danish `SKILL.md` files and set `enabled: true` in the frontmatter; otherwise leave them disabled and say so. If the user needs a local board that is not shipped, guide them to `/add-portal` (market-specific skills live in their fork). WebSearch/`site:` queries remain the fallback for portals without a CLI skill.
 - **CV language:** "Should your CVs be written in English (the default, accepted in most markets), or in your market's language?" Record the answer as a `CV language: <language>` line in CLAUDE.md's Identity section. Cover letters always match each posting's language automatically; this setting governs the CV only. If the user is unsure, keep English and note they can re-run `/setup --section search` to change it.
 
 **Important:** Also suggest role types the user may not have considered, based on their skill profile. For example:
@@ -379,7 +382,9 @@ Create STAR examples from their actual experience (at least 3-4 examples). Path 
 Replace placeholder personal data with their actual name, contact info, and add their education and most recent experience entries.
 
 ### 9. Generate `.claude/skills/job-scraper/search-queries.md`
-Replace all placeholder tokens in the search queries file with the user's actual information from Section 9 (or the equivalent follow-up questions in Path A's Step A7):
+Replace the complete region between `PROFILE-SEARCH-START` and `PROFILE-SEARCH-END` with the user's actual strategy from Section 9 (or the equivalent follow-up questions in Path A's Step A7). Do not append personalized categories to the shipped example region: replacing it atomically is what prevents another user's setup from retaining the Dutch applied-AI defaults. Preserve the markers around the replacement so a later `--section search` run remains deterministic.
+
+Within that generated region:
 - Replace `[YOUR_PRIMARY_ROLE_TYPE]`, `[YOUR_PRIMARY_JOB_TITLE]`, etc. with actual role titles
 - Replace `[YOUR_KEY_SKILL]`, `[YOUR_DOMAIN_KEYWORD_1]`, etc. with actual skills and domain terms
 - Replace `[YOUR_CITY]`, `[YOUR_COUNTRY]`, `[YOUR_REGION]` with actual location
@@ -389,6 +394,8 @@ Replace all placeholder tokens in the search queries file with the user's actual
   - Priority 2: Their domain expertise
   - Priority 3: Adjacent roles they could pivot into
   - Priority 4: Broader roles (wider net)
+- Add a **Portal-Specific Query Plan** based on each enabled portal's documented search semantics. Set a small per-portal call budget, required geography/facets, and a discovery/detail split where supported; do not send every phrase to every portal.
+- Add a cheap **Listing Pre-filter** that rejects only mismatches proven by listing fields and passes ambiguous targeted hits, plus a **Post-detail Eligibility Filter** containing the user's actual geography, positive task signals, career-stage rules, role-shape exclusions, contract constraints, and deal-breakers. Phrase rules must include explicit exceptions rather than acting as blind keyword bans.
 
 ---
 
