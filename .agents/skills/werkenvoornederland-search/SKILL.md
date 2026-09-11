@@ -1,6 +1,6 @@
 ---
 name: werkenvoornederland-search
-version: 1.0.0
+version: 1.0.1
 description: >
   Use this skill to search live public-sector vacancies in the Netherlands on
   Werken voor Nederland, or retrieve a specific Dutch government vacancy by
@@ -23,8 +23,9 @@ metadata. It requires no authentication and has zero runtime dependencies.
 ## Access and reuse
 
 The official `robots.txt` permits vacancy crawling, disallows only `/login`, and
-sets a maximum request rate of 10 requests per second. This CLI makes one request
-per command and identifies itself honestly. Vacancy text is published under CC0;
+sets a maximum request rate of 10 requests per second. Search makes two targeted
+requests (the canonical page, then its current results component); detail makes
+one. The CLI identifies itself honestly. Vacancy text is published under CC0;
 photos are excluded from that licence and are not collected by this skill.
 
 ## Commands
@@ -81,7 +82,7 @@ Errors are JSON on stderr and exit with status `1`.
 
 ## Notes
 
-- Search uses the site's server-rendered results component with `term` and `pagina`; location and posting age are filtered from the selected page.
+- Search loads the canonical page, discovers its current server-rendered results component, then requests that component with `term` and `pagina`; location and posting age are filtered from the selected page.
 - Search cards publish a stable canonical vacancy slug used as `id`.
 - Detail pages expose structured JSON-LD plus readable content sections.
 - The final application URL may point to SuccessFactors or another government ATS.

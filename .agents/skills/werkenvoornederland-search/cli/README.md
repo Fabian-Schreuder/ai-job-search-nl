@@ -8,8 +8,9 @@ Werken voor Nederland.
 **Runtime dependencies:** none.
 
 The official robots policy permits vacancy crawling and limits clients to 10
-requests per second. The CLI makes one targeted request per invocation and does
-not access `/login` or collect photos.
+requests per second. Search makes two targeted requests so it can discover the
+site's current results-component reference; detail makes one. The CLI does not
+access `/login` or collect photos.
 
 ## Install and run
 

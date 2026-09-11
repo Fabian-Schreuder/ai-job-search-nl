@@ -12,17 +12,23 @@ The official `robots.txt` permits all paths except `/login`, declares a
 ## Vacancy search
 
 ```text
-GET /vacatures?_hn:type=component-rendering&_hn:ref=r48_r1_r4&term=data&pagina=2
+GET /vacatures?term=data&pagina=2
+GET /vacatures?_hn:type=component-rendering&_hn:ref=<current-results-ref>&term=data&pagina=2
 ```
 
 | Query parameter | CLI flag | Meaning |
 |-----------------|----------|---------|
-| `_hn:type` | internal | Requests the server-rendered results component. |
-| `_hn:ref` | internal | Selects the vacancy-results component. |
+| `_hn:type` | internal | Requests the server-rendered results component advertised by the canonical page. |
+| `_hn:ref` | internal | Opaque deployment-specific component reference; discover it from the canonical page and never hard-code it. |
 | `term` | `--query`, `-q` | Keyword search. |
 | `pagina` | `--page` | One-indexed page; omitted for page 1. |
 
-The server-rendered response contains 20 vacancy cards per page. Each card uses:
+Search first loads the canonical `/vacatures` page with `term` and `pagina`, then
+reads the hidden async placeholder immediately before `#vacancy-spinner`. Its
+`id` is the current component URL. Component references change between site
+deployments, so a stored reference eventually returns `404`.
+
+The server-rendered component response contains 20 vacancy cards per page. Each card uses:
 
 | Field | HTML anchor |
 |-------|-------------|
