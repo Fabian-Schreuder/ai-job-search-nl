@@ -46,6 +46,8 @@ Optional arguments:
 
 Read `search-queries.md` (this directory) for the search strategy. By default, run the top 3 priority query categories. If the user said "broad", run all categories. If the user specified a focus area (e.g. "data science"), prioritize queries from that category.
 
+If `search-queries.md` contains a **Portal-Specific Query Plan**, follow it instead of sending every category phrase to every portal. Respect its per-portal call budget, geography, controlled facets, and discovery/detail split. Portal search semantics differ: a phrase that is precise on LinkedIn may be a controlled title on a national board or broad full text on an aggregator.
+
 **Use the installed CLI tools as the primary search mechanism.** Fall back to `WebSearch` only for portals that do not have a CLI skill, or if `bun` is unavailable on the system.
 
 #### 1a. Check bun availability
@@ -65,12 +67,12 @@ Discover all installed portal CLI skills by reading every `SKILL.md` found under
 For each **enabled** portal skill:
 
 1. Read its `SKILL.md` to find the correct `bun run …` invocation and supported flags.
-2. Translate the query terms from `search-queries.md` into that portal's flag format (e.g. `--key`, `--search-string`, `--query`, filter codes — whatever the portal's SKILL.md specifies).
+2. Translate the query terms from `search-queries.md` into that portal's flag format (e.g. `--key`, `--search-string`, `--query`, filter codes — whatever the portal's SKILL.md specifies). Use the portal-specific plan when present; never broaden a configured title phrase to bare `AI`, `data`, `consultant`, or `product` merely because the portal accepts free text.
 3. Scope to the last 14 days using the portal's supported recency **filter** flag (`--jobage`, `--since <YYYY-MM-DD>`, etc. — as documented per portal). A portal with **no recency flag** (jobdanmark offers none) still gets scoped: every portal's search output carries a `date` field, so filter client-side — drop results whose `date` is older than 14 days after the call returns, and never invent a flag the portal's SKILL.md does not document (the CLIs reject unknown flags). `--order PublicationDate` is a sort, and a sort is not a filter — pairing it with a `--limit` is a defensible approximation on a portal that offers nothing better (jobnet), but apply the client-side date filter on top all the same.
 4. Cap results to ~20 per call using the portal's limit flag.
 5. Use `--format json` for machine-readable output.
 
-Run all portal CLI calls in parallel where possible using the Agent tool. Collect all `results` arrays into a single pool for Step 2, keeping each result tagged with its source portal skill (for Step 2 `detail` lookups).
+Run all portal CLI calls in parallel where possible using the Agent tool. Collect all `results` arrays into a single pool for Step 2, keeping each result tagged with its source portal skill (for Step 2 `detail` lookups) and the query lane that produced it.
 
 If a CLI tool exits with a non-zero code, log the error message and continue — do not abort the whole search.
 
@@ -87,7 +89,9 @@ Tag each fallback result as WebSearch-sourced, keeping the portal tag when the f
 
 ### Step 2: Fetch & Parse
 
-For each promising result from Step 1:
+Before fetching any detail, apply `search-queries.md`'s **Listing Pre-filter** using only listing fields actually returned by that portal. This is a workload filter, not the final fit score: reject only proven mismatches and non-vacancy pages. A targeted query-lane hit with missing detail remains ambiguous and proceeds; in particular, do not reject a multi-country result when its structured eligibility includes the configured market, or a `--no-description` result because its task evidence is not loaded yet. Record the count rejected at this stage and the dominant rejection reasons for Step 5.
+
+For each promising result that passes the pre-filter:
 
 **From CLI results:** Search output already includes title, company, location, date,
 and URL. For jobs worth a deeper look, fetch full detail with that portal's `detail`
@@ -122,6 +126,8 @@ For every candidate:
   the pre-helper key rule while new entries use the canonical key from Step 4.
 - Otherwise, skip if the company+title combo already exists in `seen_jobs.json`
 - Skip if the company+role already appears in `job_search_tracker.csv`
+
+After fetching the full posting, apply `search-queries.md`'s **Post-detail Eligibility Filter** before Step 3. Resolve actual work location, task content, years/seniority, contract shape, and deal-breakers from the posting. Store rejected fetched jobs as `status: "skipped"` in Step 4 so later runs do not spend another detail request on them; keep the specific rejection reason in the run summary rather than inventing a fit score.
 
 ### Step 2.5: Mass-Posting Detection (within this run)
 
@@ -160,7 +166,7 @@ It prints one line: the canonical key for that posting. The key must be a pure f
       "first_seen": "YYYY-MM-DD",
       "posted_date": "YYYY-MM-DD" | null,
       "deadline": "YYYY-MM-DD" | null,
-      "fit": "high/medium/low",
+      "fit": "high/medium/low" | null,
       "status": "new/skipped/ranked/expired",
       "portal": "<source portal skill, e.g. jobindex-search>",
       "source": "cli/websearch"
@@ -168,6 +174,11 @@ It prints one line: the canonical key for that posting. The key must be a pure f
   }
 }
 ```
+
+`fit: null` is reserved for a fetched posting rejected by the Post-detail
+Eligibility Filter before Quick Fit Assessment; it records that no fit label was
+invented. A posting that reaches Step 3 always stores `high`, `medium`, or `low`,
+including a low-fit job kept only for deduplication.
 
 The `portal` field records which CLI skill produced the job (results are already tagged per portal in Step 1b - persist that tag here). Entries written before this field existed lack it; the health check (Step 4.75) attributes those by matching the URL's domain against each portal's base URL, so do not backfill.
 
@@ -240,7 +251,7 @@ the skill.
 ```
 ## New Job Matches - YYYY-MM-DD
 
-Found X new positions (Y high, Z medium, W low match).
+Found X new positions (Y high, Z medium, W low match) from N discovery hits; P obvious mismatches were rejected before detail fetching.
 
 skipped (disabled): <portal-name>, <portal-name>
 
