@@ -32,8 +32,8 @@ bun run src/cli.ts search -q developer --city Amsterdam --format table
 | Flag | Alias | Description |
 |------|-------|-------------|
 | `--query <text>` | `-q` | Maps to the `dcoTitle` API filter. |
-| `--city <text>` | | Maps to the `city` API filter. |
-| `--distance <km>` | | Distance filter with a city; default `40`. |
+| `--city <text>` | | Resolves the city centre and applies the API's city/geolocation filters. |
+| `--distance <km>` | | Radius from the resolved city centre; default `40`. |
 | `--jobage <days>` | | Sort by date and filter available `startDate` values. |
 | `--page <n>` | | One-indexed page; default `1`. |
 | `--limit <n>` | `-n` | Results per page; default `10`. |

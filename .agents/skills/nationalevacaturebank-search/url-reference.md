@@ -12,7 +12,7 @@ https://api.nationalevacaturebank.nl
 ## Vacancy search
 
 ```
-GET /api/jobs/v3/sites/nationalevacaturebank.nl/jobs?page=1&limit=10&sort=relevance&filters=city:Amsterdam%20dcoTitle:developer
+GET /api/jobs/v3/sites/nationalevacaturebank.nl/jobs?page=1&limit=10&sort=relevance&filters=city:Amsterdam%20latitude:52.359273%20longitude:4.887517%20distance:40%20dcoTitle:developer
 ```
 
 | Query parameter | Meaning |
@@ -30,7 +30,9 @@ The search response has this envelope:
 
 Each job includes `id`, `title`, `dcoTitle`, `description`, `company`, `salary`,
 `contractType`, `careerLevel`, `categories`, `industries`, `startDate`, `endDate`,
-`status`, and `workingHours`.
+`status`, `workingHours`, and `workLocation`. Search output uses
+`workLocation.displayName` (then `workLocation.city`) rather than labelling every
+radius result as the requested search centre.
 
 ## Vacancy detail
 
@@ -70,6 +72,8 @@ Supported keys are:
 | `longitude` | `longitude:4.9041` |
 | `distance` | `distance:40` |
 
-The CLI builds `city`, `dcoTitle`, and (when a city is supplied) `distance`
-expressions from its flags. With `--jobage`, it requests `sort=date` and filters
-the returned jobs by `startDate` where that date is available.
+For a city-scoped search, the CLI first calls the geolocation lookup endpoint and
+builds `city`, `latitude`, `longitude`, and `distance` expressions together. The
+jobs endpoint returns `400` when `distance` is sent without coordinates. The CLI
+also builds `dcoTitle` from `--query`. With `--jobage`, it requests `sort=date`
+and filters the returned jobs by `startDate` where that date is available.

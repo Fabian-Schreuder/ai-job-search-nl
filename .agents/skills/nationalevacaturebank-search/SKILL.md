@@ -1,6 +1,6 @@
 ---
 name: nationalevacaturebank-search
-version: 1.0.0
+version: 1.0.1
 description: >
   Use this skill to search live vacancies in the Netherlands on Nationale
   Vacaturebank, or to retrieve a specific vacancy by its ID or API job URL.
@@ -34,12 +34,14 @@ bun run .agents/skills/nationalevacaturebank-search/cli/src/cli.ts search [--que
 ```
 
 Supply at least one of `--query` or `--city`. `--query` maps to the API's
-`dcoTitle` filter and `--city` maps to its `city` filter.
+`dcoTitle` filter. A city search resolves the city centre through the public
+geolocation endpoint, then sends `city`, `latitude`, `longitude`, and `distance`
+filters together; the jobs API rejects `distance` without coordinates.
 
 | Flag | Alias | Description |
 |------|-------|-------------|
 | `--query <text>` | `-q` | Job title or role, e.g. `developer`. |
-| `--city <text>` | | Dutch city filter, e.g. `Amsterdam`. |
+| `--city <text>` | | Dutch search centre, e.g. `Amsterdam`; each result still reports its actual vacancy location. |
 | `--distance <km>` | | Distance filter in kilometres; default `40`. Applied with `--city`. |
 | `--jobage <days>` | | Sorts by date and filters returned jobs by `startDate` when available. |
 | `--page <n>` | | One-indexed page; default `1`. |
