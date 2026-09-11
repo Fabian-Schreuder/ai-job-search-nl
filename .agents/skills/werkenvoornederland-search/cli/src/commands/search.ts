@@ -13,13 +13,19 @@ export type SearchOpts = {
 }
 
 export function buildSearchUrl(options: SearchOpts): string {
-  const parameters = new URLSearchParams({
-    "_hn:type": "component-rendering",
-    "_hn:ref": "r48_r1_r4",
-    term: options.query,
-  })
+  const parameters = new URLSearchParams({ term: options.query })
   if (options.page > 1) parameters.set("pagina", String(options.page))
   return `${BASE_URL}/vacatures?${parameters.toString()}`
+}
+
+export function findSearchComponentUrl(html: string): string | null {
+  const spinner = html.indexOf('id="vacancy-spinner"')
+  const searchArea = spinner === -1 ? html : html.slice(0, spinner)
+  const matches = [...searchArea.matchAll(/id="(\/vacatures\?[^\"]*_hn:type=component-rendering[^\"]*)"/gi)]
+  const path = matches.at(-1)?.[1]?.replace(/&amp;/g, "&")
+  if (!path) return null
+  const url = new URL(path, BASE_URL)
+  return url.origin === BASE_URL && url.pathname === "/vacatures" ? url.toString() : null
 }
 
 function filterResults(results: readonly VacancyResult[], options: SearchOpts): readonly VacancyResult[] {
@@ -55,9 +61,16 @@ function renderPlain(results: readonly VacancyResult[]): string {
 
 export async function runSearch(options: SearchOpts): Promise<number> {
   try {
-    const html = await htmlFetch(buildSearchUrl(options))
-    if (html === null) {
+    const pageHtml = await htmlFetch(buildSearchUrl(options))
+    if (pageHtml === null) {
       writeError("vacancy search page not found", "NOT_FOUND")
+      return 1
+    }
+    const componentUrl = findSearchComponentUrl(pageHtml)
+    if (componentUrl === null) throw new SyntaxError("vacancy search component is missing")
+    const html = await htmlFetch(componentUrl)
+    if (html === null) {
+      writeError("vacancy search component not found", "NOT_FOUND")
       return 1
     }
     const page = parseSearchPage(html)
