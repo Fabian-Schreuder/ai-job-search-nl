@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { runSearch } from "../src/commands/search.js"
+import { buildSearchUrl, runSearch, sinceParameter } from "../src/commands/search.js"
 
 const originalFetch = globalThis.fetch
 const originalStdoutWrite = process.stdout.write
@@ -62,5 +62,18 @@ describe("Werken voor Nederland search", () => {
       meta: { count: 1, total: 1 },
       results: [{ title: "AI Specialist", company: "Rijksorganisatie", location: "Utrecht" }],
     })
+  })
+})
+
+describe("Werken voor Nederland search URL", () => {
+  test("Given a job age, when building the URL, then the site's own publication filter covers it", () => {
+    expect(sinceParameter(undefined)).toBeNull()
+    expect(sinceParameter(1)).toBe("gisteren")
+    expect(sinceParameter(2)).toBe("3d")
+    expect(sinceParameter(7)).toBe("7d")
+    expect(sinceParameter(14)).toBe("1m")
+    expect(sinceParameter(60)).toBeNull()
+    const url = new URL(buildSearchUrl({ query: "data", jobage: 7, page: 1, limit: 20, format: "json" }))
+    expect(url.searchParams.get("sinds")).toBe("7d")
   })
 })
