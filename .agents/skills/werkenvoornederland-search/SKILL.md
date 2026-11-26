@@ -40,7 +40,7 @@ bun run .agents/skills/werkenvoornederland-search/cli/src/cli.ts search -q "data
 |------|-------|-------------|
 | `--query <text>` | `-q` | Required keywords for the official `term` parameter. |
 | `--location <text>` | `-l` | Client-side city/location filter. |
-| `--jobage <days>` | | Keep vacancies posted within the given number of days. |
+| `--jobage <days>` | | Keep vacancies posted within the given number of days. Narrows on the server with the site's own publication filter (yesterday, 3, 5, 7, 10 days, one month), then applies the exact cutoff. |
 | `--page <n>` | | One-indexed page; the site serves 20 results per page. |
 | `--limit <n>` | `-n` | Cap results emitted from the selected page; default `20`. |
 | `--format <fmt>` | | `json` (default), `table`, or `plain`. |

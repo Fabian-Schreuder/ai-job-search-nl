@@ -12,9 +12,24 @@ export type SearchOpts = {
   readonly format: OutputFormat
 }
 
+// The site's own "Gepubliceerd sinds" filter (sinds=gisteren|3d|5d|7d|10d|1m).
+// Results are not sorted by date, so filtering only the cards of one page
+// missed most recent vacancies; --jobage now narrows on the server to the
+// smallest window that covers it, and the exact cutoff is applied to the cards.
+const SINCE: ReadonlyArray<readonly [number, string]> = [
+  [1, "gisteren"], [3, "3d"], [5, "5d"], [7, "7d"], [10, "10d"], [31, "1m"],
+]
+
+export function sinceParameter(jobage: number | undefined): string | null {
+  if (jobage === undefined) return null
+  return SINCE.find(([days]) => jobage <= days)?.[1] ?? null
+}
+
 export function buildSearchUrl(options: SearchOpts): string {
   const parameters = new URLSearchParams({ term: options.query })
   if (options.page > 1) parameters.set("pagina", String(options.page))
+  const since = sinceParameter(options.jobage)
+  if (since) parameters.set("sinds", since)
   return `${BASE_URL}/vacatures?${parameters.toString()}`
 }
 
@@ -33,7 +48,7 @@ function filterResults(results: readonly VacancyResult[], options: SearchOpts): 
   const cutoff = options.jobage === undefined ? null : Date.now() - options.jobage * 86_400_000
   return results
     .filter((result) => !location || result.location?.toLocaleLowerCase("nl-NL").includes(location))
-    .filter((result) => cutoff === null || result.date === null || Date.parse(result.date) >= cutoff)
+    .filter((result) => cutoff === null || result.date === null || Date.parse(result.date) >= cutoff - 86_400_000)
     .slice(0, options.limit)
 }
 
